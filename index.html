@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#162a46">
+  <meta name="description" content="根据 priest 小说《过门》制作的轻量合成叙事小游戏。">
+  <title>过门 · 旧人成新</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <audio id="bgm" src="assets/audio/memory-loop.mp3" loop preload="none"></audio>
+  <main class="game-shell">
+    <header class="topbar">
+      <div class="brand"><span class="door-mark">门</span><div><h1>过门</h1><p>旧人成新</p></div></div>
+      <div class="stats">
+        <div class="stat"><span>回忆</span><strong id="memoryScore">0</strong></div>
+        <div class="stat"><span>体力</span><strong><b id="energy">80</b>/80</strong></div>
+        <button id="soundBtn" class="round-btn" aria-label="播放背景音乐" title="音乐">♫</button>
+        <button id="helpBtn" class="round-btn" aria-label="查看玩法" title="玩法">?</button>
+      </div>
+    </header>
+
+    <section class="story-stage" id="storyStage">
+      <div class="stage-shade"></div>
+      <img class="hero hero-left" src="assets/characters/character-01.webp" alt="徐西临">
+      <img class="hero hero-right" src="assets/characters/character-06.webp" alt="窦寻">
+      <div class="chapter-card">
+        <span id="chapterTag">第一章 · 同桌</span>
+        <h2 id="chapterTitle">把散落的旧物找回来</h2>
+        <p id="chapterText">十三年前，一张空课桌让两条原本平行的路有了交点。</p>
+      </div>
+      <button id="albumBtn" class="album-btn"><span>人物志</span><b id="albumCount">2 / 12</b></button>
+    </section>
+
+    <section class="quest-panel">
+      <div class="quest-copy">
+        <span class="quest-label">当前委托</span>
+        <strong id="questName">窦寻的转学第一天</strong>
+        <small id="questHint">把线索整理齐，再提交委托</small>
+        <div id="questItems" class="quest-items"></div>
+      </div>
+      <div class="quest-side"><div class="quest-reward"><span>奖励</span><b id="rewardText">+40 回忆</b></div><button id="submitQuest" disabled>提交</button></div>
+      <div class="progress-track"><i id="questProgress"></i></div>
+    </section>
+
+    <section class="board-wrap">
+      <div class="board-head">
+        <div><strong>记忆仓库</strong><span>点击同级物件，两两合成</span></div>
+        <div class="board-actions">
+          <button id="shuffleBtn">整理</button>
+          <button id="resetBtn">重来</button>
+        </div>
+      </div>
+      <div id="board" class="board" role="grid" aria-label="合成棋盘"></div>
+      <div id="toast" class="toast" aria-live="polite"></div>
+    </section>
+
+    <footer class="bottom-dock">
+      <button id="sourceBtn" class="source-btn"><span class="source-icon">✦</span><span><b>翻找旧纸箱</b><small>消耗 1 体力 · 当前剧情线索概率提升</small></span></button>
+      <p>“那门是窄的，路是小的。”</p>
+    </footer>
+  </main>
+
+  <dialog id="helpDialog" class="modal">
+    <button class="close" data-close aria-label="关闭">×</button>
+    <h2>怎么玩</h2>
+    <ol>
+      <li>点击底部「翻找旧纸箱」，获得当前委托更可能用到的旧物。</li>
+      <li>同一条线索链里的两个同级物件可以合成。物理笔记、MP3、灰鹦鹉、豆豆、篮球校服和年花互不串线。</li>
+      <li>备齐委托栏里的物件后点击「提交」，物件会被收走并推进原作记忆章节。</li>
+    </ol>
+    <p>进度会自动保存在这台设备上。音乐需点击右上角 ♫ 后播放。</p>
+  </dialog>
+
+  <dialog id="albumDialog" class="modal album-modal">
+    <button class="close" data-close aria-label="关闭">×</button>
+    <h2>人物志</h2>
+    <p>随记忆章节逐步解锁。</p>
+    <div id="albumGrid" class="album-grid"></div>
+  </dialog>
+
+  <dialog id="endingDialog" class="modal ending-modal">
+    <button class="close" data-close aria-label="关闭">×</button>
+    <span class="ending-kicker">终章 · 旧人成新</span>
+    <h2>路再窄，也还是走到了彼此身边</h2>
+    <p>校舍房屋、书本纸笔都已经放旧。好过也掰过，想过一生一世，也想过老死不相往来。十三年后，他们终于推开了同一扇门。</p>
+    <button id="continueBtn" class="primary">继续整理回忆</button>
+  </dialog>
+
+  <script src="game.js"></script>
+</body>
+</html>
