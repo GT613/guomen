@@ -13,7 +13,7 @@ const QUESTS = [
   {name:'“姥爷”花店重逢',hint:'年关细雪，后备箱里装满金桔和蝴蝶兰。',needs:[['flower',2],['music',2]],reward:160,tag:'第四章 · 重逢',title:'十三年后，旧人乍然相逢',text:'一辆顺风车拐进小胡同。沉默的车厢、循环的歌和老成的花店，把旧事重新推到眼前。',bg:3,left:1,right:2},
   {name:'推开同一扇门',hint:'校舍与纸笔会旧，愿意回头的人不会。',needs:[['court',2],['parrot',2],['flower',2]],reward:240,tag:'终章 · 过门',title:'旧人成新',text:'他们好过，也掰过。走过十三年窄路，最终还是把彼此写进了往后的寻常日子。',bg:5,left:5,right:6}
 ];
-const PEOPLE=['徐西临 · 重逢','窦寻 · 旧巷','少年同学','徐西临 · 球场','徐西临 · 课堂','窦寻 · 雪夜','窦寻 · 窗前','李博志','老成','蔡敬','张老师','罗冰'];
+const PEOPLE=['徐西临 · 重逢','宋连元 · 旧巷','少年同学','徐西临 · 球场','徐西临 · 课堂','窦寻 · 雪夜','窦寻 · 窗前','李博志','老成','蔡敬','张老师','罗冰'];
 const SIZE=42, boardEl=document.querySelector('#board');
 let state={version:2,board:Array(SIZE).fill(null),score:0,energy:80,quest:0,selected:null,unlocked:2,merges:0};
 let toastTimer;
