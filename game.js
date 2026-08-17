@@ -1,75 +1,48 @@
-const CHAINS = [
-  {id:'physics',names:['铅笔头','物理“小黄书”','窦寻的物理笔记'],icons:['✏️','📒'],image:'item-03.webp'},
-  {id:'music',names:['旧电池','缠住的耳机','窦寻的MP3'],icons:['🔋','🎧'],image:'item-04.webp'},
-  {id:'court',names:['球场哨子','旧篮球','篮球与蓝白校服'],icons:['📣','🏀'],image:'item-06.webp'},
-  {id:'parrot',names:['灰色羽毛','打开的鸟笼','灰鹦鹉'],icons:['🪶','🪺'],image:'item-01.webp'},
-  {id:'dog',names:['一小包狗粮','旧项圈','小狗豆豆'],icons:['🦴','🦮'],image:'item-05.webp'},
-  {id:'flower',names:['花店红绳','老成的花盆','金桔与蝴蝶兰'],icons:['🎀','🪴'],image:'item-02.webp'}
-];
-const QUESTS = [
-  {name:'窦寻的转学第一天',hint:'课桌旁，一个不肯借笔记，一个偏要搭话。',needs:[['physics',2],['music',1]],reward:60,tag:'第一章 · 同桌',title:'从一张空课桌开始',text:'六中一班的新同桌针锋相对。窦寻的物理笔记和耳机，成了徐西临最早留意他的理由。',bg:1,left:1,right:6},
-  {name:'篮球场边的少年们',hint:'徐团座抱着球踹开门，豆豆也守着旧院。',needs:[['court',2],['dog',2]],reward:90,tag:'第二章 · 少年',title:'有些门，要撞开才算数',text:'篮球、校服、三对三和一群吵闹同学，拼出了他们共同的少年时代。',bg:2,left:4,right:10},
-  {name:'有灯亮着的家',hint:'外婆、灰鹦鹉和满屋饭香，接住两个少年。',needs:[['parrot',2],['physics',1]],reward:120,tag:'第三章 · 家人',title:'被留在饭桌旁的人',text:'灰鹦鹉在屋里学人说话。对窦寻来说，徐家的灯光第一次有了“家”的形状。',bg:4,left:5,right:7},
-  {name:'“姥爷”花店重逢',hint:'年关细雪，后备箱里装满金桔和蝴蝶兰。',needs:[['flower',2],['music',2]],reward:160,tag:'第四章 · 重逢',title:'十三年后，旧人乍然相逢',text:'一辆顺风车拐进小胡同。沉默的车厢、循环的歌和老成的花店，把旧事重新推到眼前。',bg:3,left:1,right:2},
-  {name:'推开同一扇门',hint:'校舍与纸笔会旧，愿意回头的人不会。',needs:[['court',2],['parrot',2],['flower',2]],reward:240,tag:'终章 · 过门',title:'旧人成新',text:'他们好过，也掰过。走过十三年窄路，最终还是把彼此写进了往后的寻常日子。',bg:5,left:5,right:6}
-];
-const PEOPLE=['徐西临 · 重逢','宋连元 · 旧巷','少年同学','余依然 · 球场','徐西临 · 课堂','窦寻 · 雪夜','窦寻 · 窗前','李博志','老成','蔡敬','张老师','罗冰'];
-const SIZE=42, boardEl=document.querySelector('#board');
-let state={version:2,board:Array(SIZE).fill(null),score:0,energy:80,quest:0,selected:null,unlocked:2,merges:0};
-let toastTimer;
-
-const chainById=id=>CHAINS.find(c=>c.id===id);
-function itemName(item){return chainById(item.chain).names[item.level]}
-function itemKey(item){return `${item.chain}:${item.level}`}
-function itemImage(item){const c=chainById(item.chain);return item.level===2?`assets/items/${c.image}`:null}
-function load(){
-  try{const saved=JSON.parse(localStorage.getItem('guomen-merge-v2'));if(saved?.version===2&&Array.isArray(saved.board)&&saved.board.length===SIZE)state={...state,...saved,selected:null}}catch(e){}
-  if(state.board.every(x=>x===null)){
-    const starters=[['physics',0],['music',0],['court',0],['parrot',0],['dog',0],['flower',0],['physics',1],['court',0],['music',0],['flower',0]];
-    [2,4,7,10,13,17,21,28,33,38].forEach((cell,i)=>state.board[cell]={chain:starters[i][0],level:starters[i][1]});
-  }
-}
-function save(){localStorage.setItem('guomen-merge-v2',JSON.stringify({...state,selected:null}))}
-function countNeeded(need){return state.board.filter(x=>x&&x.chain===need[0]&&x.level===need[1]).length}
-function canSubmit(){if(state.quest>=QUESTS.length)return false;const used={};return QUESTS[state.quest].needs.every(n=>{const key=n.join(':');used[key]=(used[key]||0)+1;return countNeeded(n)>=used[key]})}
-function iconMarkup(item){const image=itemImage(item);return image?`<img src="${image}" alt="">`:chainById(item.chain).icons[item.level]}
-function render(){
-  boardEl.innerHTML='';
-  state.board.forEach((item,i)=>{const b=document.createElement('button');b.className='cell'+(!item?' empty':'')+(state.selected===i?' selected':'')+(item?.level===2?' rare':'');b.dataset.i=i;b.setAttribute('role','gridcell');
-    if(item){b.innerHTML=`<span class="item-level">${item.level+1}</span><span class="item-icon">${iconMarkup(item)}</span><span class="item-name">${itemName(item)}</span>`;b.setAttribute('aria-label',`${itemName(item)}，等级 ${item.level+1}`)}else b.setAttribute('aria-label','空格');boardEl.appendChild(b)});
-  document.querySelector('#memoryScore').textContent=state.score;document.querySelector('#energy').textContent=state.energy;
-  const done=state.quest>=QUESTS.length,q=QUESTS[Math.min(state.quest,QUESTS.length-1)];
-  document.querySelector('#questName').textContent=done?'所有记忆已经归位':q.name;document.querySelector('#questHint').textContent=done?'现在可以继续自由整理六条线索':q.hint;document.querySelector('#rewardText').textContent=done?'自由模式':`+${q.reward} 回忆`;
-  const needsEl=document.querySelector('#questItems');needsEl.innerHTML='';
-  if(!done)q.needs.forEach(n=>{const item={chain:n[0],level:n[1]},have=countNeeded(n)>0,chip=document.createElement('span');chip.className=`need-chip${have?' have':''}`;const image=itemImage(item);chip.innerHTML=`${image?`<img src="${image}" alt="">`:`<b>${chainById(n[0]).icons[n[1]]}</b>`}${itemName(item)} ${have?'✓':'· 未找到'}`;needsEl.appendChild(chip)});
-  const submit=document.querySelector('#submitQuest');submit.disabled=!canSubmit();submit.textContent=done?'完成':canSubmit()?'提交':'未集齐';
-  const complete=done?1:q.needs.filter(n=>countNeeded(n)>0).length/q.needs.length;document.querySelector('#questProgress').style.width=`${complete*100}%`;
-  document.querySelector('#chapterTag').textContent=q.tag;document.querySelector('#chapterTitle').textContent=q.title;document.querySelector('#chapterText').textContent=q.text;document.querySelector('#storyStage').style.backgroundImage=`url('assets/backgrounds/scene-${String(q.bg).padStart(2,'0')}.webp')`;
-  document.querySelector('.hero-left').src=`assets/characters/character-${String(q.left).padStart(2,'0')}.webp`;document.querySelector('.hero-right').src=`assets/characters/character-${String(q.right).padStart(2,'0')}.webp`;document.querySelector('#albumCount').textContent=`${Math.min(12,state.unlocked)} / 12`;renderAlbum();save();
-}
-function showToast(msg){const t=document.querySelector('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),1700)}
-function tapCell(i){
-  const item=state.board[i];if(!item){state.selected=null;render();return}if(state.selected===null){state.selected=i;render();return}if(state.selected===i){state.selected=null;render();return}
-  const a=state.selected,first=state.board[a];
-  if(first.chain===item.chain&&first.level===item.level&&item.level<2){state.board[a]=null;state.board[i]={chain:item.chain,level:item.level+1};state.selected=null;state.merges++;state.score+=8*(item.level+1);render();boardEl.children[i].classList.add('just-merged');showToast(`合成了「${itemName(state.board[i])}」`)}else{state.selected=i;render();showToast(first.chain!==item.chain?'不同线索不能合成':'需要两个同级物件')}
-}
-function submitQuest(){
-  if(!canSubmit())return;const q=QUESTS[state.quest];
-  q.needs.forEach(n=>{const i=state.board.findIndex(x=>x&&x.chain===n[0]&&x.level===n[1]);if(i>=0)state.board[i]=null});
-  state.score+=q.reward;state.quest++;state.unlocked=Math.min(12,2+state.quest*2);state.energy=Math.min(80,state.energy+8);showToast(`记忆归位，回忆 +${q.reward}，体力 +8`);render();if(state.quest>=QUESTS.length)setTimeout(()=>document.querySelector('#endingDialog').showModal(),550)
-}
-function source(){
-  if(state.energy<1){showToast('体力不足，每 30 秒恢复 1 点');return}const empty=state.board.map((x,i)=>x===null?i:-1).filter(i=>i>=0);if(!empty.length){showToast('仓库满了，先合成或提交委托');return}
-  state.energy--;const current=QUESTS[Math.min(state.quest,QUESTS.length-1)],wanted=current.needs.map(n=>n[0]);let chain;
-  if(state.quest<QUESTS.length&&Math.random()<.72)chain=wanted[Math.floor(Math.random()*wanted.length)];else chain=CHAINS[Math.floor(Math.random()*CHAINS.length)].id;
-  const level=Math.random()<.22?1:0,idx=empty[Math.floor(Math.random()*empty.length)];state.board[idx]={chain,level};render();boardEl.children[idx].classList.add('just-merged')
-}
-function shuffle(){const filled=state.board.filter(Boolean);for(let i=filled.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[filled[i],filled[j]]=[filled[j],filled[i]]}state.board=[...filled,...Array(SIZE-filled.length).fill(null)];state.selected=null;render();showToast('六条线索已经重新排列')}
-function resetGame(){if(!confirm('确定清空进度，从第一章重新开始吗？'))return;localStorage.removeItem('guomen-merge-v2');state={version:2,board:Array(SIZE).fill(null),score:0,energy:80,quest:0,selected:null,unlocked:2,merges:0};load();render()}
-function renderAlbum(){const g=document.querySelector('#albumGrid');g.innerHTML='';PEOPLE.forEach((name,i)=>{const d=document.createElement('div');d.className='person'+(i>=state.unlocked?' locked':'');d.innerHTML=`<img src="assets/characters/character-${String(i+1).padStart(2,'0')}.webp" alt="${i<state.unlocked?name:'未解锁人物'}"><span>${i<state.unlocked?name:'等待解锁'}</span>`;g.appendChild(d)})}
-boardEl.addEventListener('click',e=>{const cell=e.target.closest('.cell');if(cell)tapCell(Number(cell.dataset.i))});
-document.querySelector('#sourceBtn').onclick=source;document.querySelector('#submitQuest').onclick=submitQuest;document.querySelector('#shuffleBtn').onclick=shuffle;document.querySelector('#resetBtn').onclick=resetGame;document.querySelector('#helpBtn').onclick=()=>document.querySelector('#helpDialog').showModal();document.querySelector('#albumBtn').onclick=()=>document.querySelector('#albumDialog').showModal();
-document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('dialog').close());document.querySelector('#continueBtn').onclick=()=>document.querySelector('#endingDialog').close();document.querySelectorAll('dialog').forEach(d=>d.addEventListener('click',e=>{if(e.target===d)d.close()}));
-const audio=document.querySelector('#bgm'),sound=document.querySelector('#soundBtn');sound.onclick=async()=>{if(audio.paused){try{await audio.play();sound.classList.add('active');sound.setAttribute('aria-label','暂停背景音乐')}catch(e){showToast('浏览器暂时无法播放音乐')}}else{audio.pause();sound.classList.remove('active');sound.setAttribute('aria-label','播放背景音乐')}};
-setInterval(()=>{if(state.energy<80){state.energy++;render()}},30000);
-load();render();if(!localStorage.getItem('guomen-seen-help-v2')){setTimeout(()=>document.querySelector('#helpDialog').showModal(),500);localStorage.setItem('guomen-seen-help-v2','1')}
+const C=[
+['school','🏫','item-03.webp','六中转学、同桌与少年时代的起点。',['转学通知','六中校牌','泛黄白校服','空课桌合影','六中少年册']],
+['physics','📐','item-03.webp','窦寻擅长的物理与竞赛，是沉默外表下清晰的秩序。',['断铅笔','物理习题','竞赛笔记','小黄书批注','窦寻解题册']],
+['music','🎧','item-04.webp','耳机、MP3 与林肯公园，留下青春的声音。',['旧耳机线','随身耳机','旧 MP3','林肯公园歌单','循环十三年的歌']],
+['court','🏀','item-06.webp','徐西临是校篮球队成员，球场也是少年朋友圈的中心。',['球场哨子','旧篮球','蓝白队服','三对三记分牌','六中冠军球']],
+['parrot','🦜','item-01.webp','灰不溜秋、鬼头鬼脑的幼鸟，成了家中的一员。',['灰色羽毛','鸟食小碟','打开的鸟笼','灰鹦鹉站架','学会说话的鹦鹉']],
+['dog','🐕','item-05.webp','豆豆是一只多重血统的串串狗，守着徐家的日常。',['一小包狗粮','旧项圈','磨牙玩具','豆豆的脚印','守门的豆豆']],
+['flower','🌼','item-02.webp','“姥爷”花店见证重逢，金桔与蝴蝶兰带回旧事。',['花店红绳','金桔盆栽','蝴蝶兰花束','姥爷花店招牌','年关重逢花篮']],
+['home','🏠','item-02.webp','饭桌、灯光与家人，让“留下”有了具体形状。',['一副碗筷','热饭保温盒','徐家门钥匙','饭桌合照','亮着灯的家']],
+['snow','❄️','item-04.webp','年关细雪、窄巷与顺风车，铺成重逢的路。',['一片细雪','旧车票','顺风车钥匙','窄巷路灯','重逢的归途']],
+['letter','✉️','item-03.webp','没说出口的话与旧纸张，拼出错开的年月。',['空白便签','折角书页','未寄出的信','十三年手记','写给往后的信']]
+].map(x=>({id:x[0],icon:x[1],image:x[2],lore:x[3],names:x[4]}));
+const Q=[
+['转校生来到六中','从六中校牌与物理习题开始。',[['school',1],['physics',1]],80,'第一章 · 前后桌','少年们的座位排成一个“铁十字”','徐西临与蔡敬同桌，老成坐在前面；转校生窦寻恰好坐在他们后面。',1,5,7],
+['耳机里的少年','找回旧 MP3 与竞赛笔记。',[['music',2],['physics',2]],120,'第二章 · 声音','喧闹之外，还有一首循环的歌','耳机里的林肯公园和纸上的物理公式，替窦寻留了一块安静地方。',2,5,7],
+['篮球场边','队服与旧校牌都在六中。',[['court',2],['school',2]],160,'第三章 · 少年','球场哨响，人群正盛','校篮球队、三对三和吵闹同学，拼成徐西临热烈的少年时代。',2,4,10],
+['有灯亮着的家','豆豆、灰鹦鹉与徐家的钥匙。',[['dog',2],['parrot',2],['home',2]],220,'第四章 · 家人','被留在饭桌旁的人','豆豆守门，灰鹦鹉学人说话。徐家的灯光让“留下”有了形状。',4,5,7],
+['没寄出的年月','一封信与循环的歌。',[['letter',2],['music',3]],280,'第五章 · 错身','有些话，被时间夹进书页','少年人的骄傲与误解拉长成十三年，没说出口的话从未消失。',1,1,6],
+['“姥爷”花店','金桔、蝴蝶兰和年关细雪。',[['flower',2],['snow',2]],340,'第六章 · 重逢','细雪落在窄巷与花店门口','一辆顺风车拐进小胡同。金桔与蝴蝶兰旁，旧人猝然重逢。',3,1,2],
+['回到亮灯处','把归途与家门钥匙合到更高等级。',[['snow',3],['home',3],['dog',3]],420,'第七章 · 归途','路再窄，也有人等你回家','旧房屋、热饭与守门的豆豆，把漂泊的人接回寻常生活。',4,2,6],
+['推开同一扇门','收好少年册、花店招牌与写给往后的信。',[['school',4],['flower',3],['letter',4]],600,'终章 · 过门','旧人成新，往后仍是寻常日子','走过十三年窄路，他们终于把彼此写进以后。',5,5,6]
+].map(x=>({name:x[0],hint:x[1],needs:x[2],reward:x[3],tag:x[4],title:x[5],text:x[6],bg:x[7],left:x[8],right:x[9]}));
+const ICONS={
+school:['📄','🏷️','👕','📷','📘'],physics:['✏️','📐','🧮','📙','📚'],music:['🔌','🎧','🎵','🎸','🎶'],court:['📣','🏀','🎽','🔢','🏆'],parrot:['🪶','🥣','🪹','🦜','💬'],dog:['🦴','🦮','🧸','🐾','🐕'],flower:['🎀','🍊','🌸','🏪','💐'],home:['🥢','🍱','🔑','🖼️','🏠'],snow:['❄️','🎫','🚙','💡','🛣️'],letter:['📝','📑','✉️','📓','💌']
+};
+const T={search:['线索检索','🔎','任务物品概率 +4%',90],craft:['整理技法','🧩','高阶物品概率 +5%',110],recall:['回忆回溯','📖','任务奖励 +10%',130],stamina:['持久翻找','☕','体力上限 +10',100]},P=['徐西临 · 重逢','窦寻 · 旧友','少年同学','余依然','徐西临 · 课堂','窦寻 · 雪夜','窦寻 · 窗前','李博志','老成','蔡敬','张老师','罗冰'],N=48,B=document.querySelector('#board');
+let s={version:3,board:Array(N).fill(null),score:0,energy:80,quest:0,selected:null,unlocked:2,merges:0,tech:{search:0,craft:0,recall:0,stamina:0}},toastTimer,tutorialStep=0;
+const TUTORIAL=[['📦','从旧纸箱开始','每次翻找消耗 1 点体力，并更容易找到当前委托需要的线索。'],['🧩','合成同类记忆','依次点击两个同线、同等级物件，它们会合成更高一级的原著线索。'],['📜','完成章节委托','集齐委托栏显示的物件后提交，即可推进剧情并获得回忆。'],['🔎','升级整理技术','用回忆升级检索、技法、回溯与耐力。技术效果永久保留。']];
+const by=id=>C.find(c=>c.id===id),name=o=>by(o.chain).names[o.level],maxE=()=>80+s.tech.stamina*10,cost=id=>T[id][3]*(s.tech[id]+1),count=(c,l)=>s.board.filter(x=>x&&x.chain===c&&x.level===l).length;
+function load(){try{let z=JSON.parse(localStorage.getItem('guomen-merge-v3'));if(z?.version===3&&z.board?.length===N)s={...s,...z,tech:{...s.tech,...z.tech},selected:null}}catch(e){}if(s.board.every(x=>!x)){let a=['school','physics','music','court','parrot','dog','flower','home','snow','letter','school','physics'];[1,3,6,9,12,16,20,24,29,34,39,44].forEach((p,i)=>s.board[p]={chain:a[i],level:i<2?1:0})}}
+const save=()=>localStorage.setItem('guomen-merge-v3',JSON.stringify({...s,selected:null}));
+function canSubmit(){if(s.quest>=Q.length)return false;let u={};return Q[s.quest].needs.every(n=>{let k=n.join(':');u[k]=(u[k]||0)+1;return count(...n)>=u[k]})}
+function toast(m){let t=document.querySelector('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),1800)}
+function tech(){let g=document.querySelector('#techGrid'),total=0;g.innerHTML='';Object.entries(T).forEach(([id,t])=>{let lv=s.tech[id],c=cost(id),b=document.createElement('button');total+=lv;b.className='tech-card';b.disabled=lv>=5||s.score<c;b.innerHTML=`<span>${t[1]}</span><div><b>${t[0]} Lv.${lv}</b><small>${t[2]}</small></div><em>${lv>=5?'已满级':c+' 回忆'}</em>`;b.onclick=()=>upgrade(id);g.appendChild(b)});document.querySelector('#techTotal').textContent='技术等级 '+total}
+function render(){B.innerHTML='';s.board.forEach((o,i)=>{let b=document.createElement('button');b.className='cell'+(!o?' empty':'')+(s.selected===i?' selected':'')+(o?.level>=3?' rare':'')+(o?' chain-'+o.chain:'');b.dataset.i=i;if(o){let c=by(o.chain),icon=ICONS[o.chain][o.level];b.innerHTML=`<span class="item-level">${o.level+1}</span><span class="item-icon">${icon}</span><span class="item-name">${name(o)}</span>`;b.title=`${name(o)}｜${c.lore}`;b.setAttribute('aria-label',`${name(o)}，等级 ${o.level+1}。${c.lore}`)}else b.setAttribute('aria-label','空格');B.appendChild(b)});
+document.querySelector('#memoryScore').textContent=s.score;document.querySelector('#energy').textContent=s.energy;document.querySelector('#energyMax').textContent=maxE();let done=s.quest>=Q.length,q=Q[Math.min(s.quest,Q.length-1)];document.querySelector('#questName').textContent=done?'全部记忆已经归位':q.name;document.querySelector('#questHint').textContent=done?'自由整理全部十条原著线索':q.hint;document.querySelector('#rewardText').textContent=done?'自由模式':`+${Math.round(q.reward*(1+s.tech.recall*.1))} 回忆`;let ne=document.querySelector('#questItems');ne.innerHTML='';if(!done)q.needs.forEach(n=>{let o={chain:n[0],level:n[1]},have=count(...n)>0,d=document.createElement('span');d.className='need-chip'+(have?' have':'');d.innerHTML=`<b>${ICONS[n[0]][n[1]]}</b>${name(o)} ${have?'✓':'· 未找到'}`;ne.appendChild(d)});document.querySelector('#submitQuest').disabled=!canSubmit();document.querySelector('#submitQuest').textContent=done?'已完成':canSubmit()?'提交':'未集齐';document.querySelector('#questProgress').style.width=(done?100:q.needs.filter(n=>count(...n)>0).length/q.needs.length*100)+'%';['chapterTag','chapterTitle','chapterText'].forEach((id,i)=>document.querySelector('#'+id).textContent=[q.tag,q.title,q.text][i]);document.querySelector('#storyStage').style.backgroundImage=`url('assets/backgrounds/scene-${String(q.bg).padStart(2,'0')}.webp')`;document.querySelector('.hero-left').src=`assets/characters/character-${String(q.left).padStart(2,'0')}.webp`;document.querySelector('.hero-right').src=`assets/characters/character-${String(q.right).padStart(2,'0')}.webp`;document.querySelector('#albumCount').textContent=`${Math.min(12,s.unlocked)} / 12`;document.querySelector('#sourceHint').textContent=`消耗 1 体力 · 任务线索加成 ${72+s.tech.search*4}%`;album();tech();save()}
+function tap(i){let o=s.board[i];if(!o){s.selected=null;return render()}if(s.selected===null||s.selected===i){s.selected=s.selected===i?null:i;return render()}let a=s.selected,f=s.board[a];if(f.chain===o.chain&&f.level===o.level&&o.level<4){s.board[a]=null;s.board[i]={chain:o.chain,level:o.level+1};s.selected=null;s.merges++;s.score+=10*(o.level+1);render();B.children[i].classList.add('just-merged');toast('合成：'+name(s.board[i]))}else{s.selected=i;render();toast(o.level>=4?'这件物品已经满级':'需要两个同线、同级物品')}}
+function submit(){if(!canSubmit())return;let q=Q[s.quest];q.needs.forEach(n=>{let i=s.board.findIndex(x=>x&&x.chain===n[0]&&x.level===n[1]);if(i>=0)s.board[i]=null});let r=Math.round(q.reward*(1+s.tech.recall*.1));s.score+=r;s.quest++;s.unlocked=Math.min(12,2+s.quest+Math.floor(s.quest/2));s.energy=Math.min(maxE(),s.energy+10);toast(`记忆归位：回忆 +${r}`);render();if(s.quest>=Q.length)setTimeout(()=>document.querySelector('#endingDialog').showModal(),500)}
+function source(){if(s.energy<1)return toast('体力不足，请稍后恢复');let e=s.board.map((x,i)=>x===null?i:-1).filter(i=>i>=0);if(!e.length)return toast('仓库满了，请先合成或提交');s.energy--;let q=Q[Math.min(s.quest,Q.length-1)],w=q.needs.map(n=>n[0]),focus=Math.min(.92,.72+s.tech.search*.04),chain=s.quest<Q.length&&Math.random()<focus?w[Math.floor(Math.random()*w.length)]:C[Math.floor(Math.random()*C.length)].id,roll=Math.random(),boost=s.tech.craft*.05,level=roll<.03+boost*.25?2:roll<.22+boost?1:0,i=e[Math.floor(Math.random()*e.length)];s.board[i]={chain,level};render();B.children[i].classList.add('just-merged')}
+function upgrade(id){let c=cost(id);if(s.tech[id]>=5||s.score<c)return;s.score-=c;s.tech[id]++;if(id==='stamina')s.energy+=10;toast(T[id][0]+'升级');render()}
+function shuffle(){let f=s.board.filter(Boolean);for(let i=f.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[f[i],f[j]]=[f[j],f[i]]}s.board=[...f,...Array(N-f.length).fill(null)];s.selected=null;render();toast('仓库已重新排列')}
+function reset(){if(!confirm('确定清空进度，从第一章重新开始吗？'))return;localStorage.removeItem('guomen-merge-v3');s={version:3,board:Array(N).fill(null),score:0,energy:80,quest:0,selected:null,unlocked:2,merges:0,tech:{search:0,craft:0,recall:0,stamina:0}};load();render()}
+function album(){let g=document.querySelector('#albumGrid');g.innerHTML='';P.forEach((n,i)=>{let d=document.createElement('div');d.className='person'+(i>=s.unlocked?' locked':'');d.innerHTML=`<img src="assets/characters/character-${String(i+1).padStart(2,'0')}.webp" alt="${i<s.unlocked?n:'未解锁人物'}"><span>${i<s.unlocked?n:'等待解锁'}</span>`;g.appendChild(d)})}
+function showTutorial(step=0){tutorialStep=step;let d=document.querySelector('#tutorialDialog'),x=TUTORIAL[step];document.querySelector('#tutorialCount').textContent=`${step+1} / ${TUTORIAL.length}`;document.querySelector('#tutorialIcon').textContent=x[0];document.querySelector('#tutorialTitle').textContent=x[1];document.querySelector('#tutorialText').textContent=x[2];document.querySelector('#tutorialDots').innerHTML=TUTORIAL.map((_,i)=>`<i class="${i===step?'active':''}"></i>`).join('');document.querySelector('#nextTutorial').textContent=step===TUTORIAL.length-1?'开始整理':'下一步';if(!d.open)d.showModal()}
+function finishTutorial(){localStorage.setItem('guomen-tutorial-v3','1');document.querySelector('#tutorialDialog').close()}
+B.onclick=e=>{let c=e.target.closest('.cell');if(c)tap(Number(c.dataset.i))};document.querySelector('#sourceBtn').onclick=source;document.querySelector('#submitQuest').onclick=submit;document.querySelector('#shuffleBtn').onclick=shuffle;document.querySelector('#resetBtn').onclick=reset;document.querySelector('#helpBtn').onclick=()=>document.querySelector('#helpDialog').showModal();document.querySelector('#albumBtn').onclick=()=>document.querySelector('#albumDialog').showModal();document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('dialog').close());document.querySelector('#continueBtn').onclick=()=>document.querySelector('#endingDialog').close();
+document.querySelector('#nextTutorial').onclick=()=>tutorialStep<TUTORIAL.length-1?showTutorial(tutorialStep+1):finishTutorial();document.querySelector('#skipTutorial').onclick=finishTutorial;
+let audio=document.querySelector('#bgm'),sound=document.querySelector('#soundBtn');sound.onclick=async()=>{if(audio.paused){try{await audio.play();sound.classList.add('active')}catch(e){toast('浏览器暂时无法播放音乐')}}else{audio.pause();sound.classList.remove('active')}};setInterval(()=>{if(s.energy<maxE()){s.energy++;render()}},15000);load();render();if(!localStorage.getItem('guomen-tutorial-v3'))setTimeout(()=>showTutorial(0),450)
