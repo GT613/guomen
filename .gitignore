@@ -1,0 +1,9 @@
+# 制作原始素材体积较大；发布版已经压缩到 assets 目录
+人物图片/
+素材/
+背景图片/
+背景音乐/
+contact-sheet.jpg
+make_contact_sheet.py
+.DS_Store
+Thumbs.db
